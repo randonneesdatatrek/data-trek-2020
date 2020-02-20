@@ -7,8 +7,9 @@
 - Input
 - Output
 - README
-- LICENSE
+- LICENSE  
 .git
+
 
 ### Structure example
 
