@@ -1,8 +1,12 @@
+## Acknowledgments:
+# Awesome resources who inspired this tutorial, check them out!:
+# https://uc-r.github.io/random_forests
+# https://koalaverse.github.io/machine-learning-in-R/random-forest.html
+
 ## Preparation
 
 # Load required packages
 library(randomForest)
-library(tidyverse)
 
 # Load datasets
 red_dataset <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv", sep = ";")
@@ -17,9 +21,9 @@ head(white_wine)
 
 ## Arrange dataset
 # Add type
-red_wine$type <- "red"
+red_wine$type <- factor("red")
 head(red_wine)
-white_wine$type <- "white"
+white_wine$type <- factor("white")
 head(white_wine)
 
 # Join datasets
@@ -55,12 +59,20 @@ barplot(table(as.factor(both_wine$quality)))
 
 ### Prep the data
 
-both_wine$type <- as.factor(both_wine$type)
+train_inds <- sample(1:nrow(both_wine), 0.7*nrow(both_wine))
+train_wine <- both_wine[train_inds,]
+table(train_wine$type, train_wine$quality)
+valid_wine <- both_wine[-train_inds,]
+table(train_wine$type, train_wine$quality)
+table(valid_wine$type, valid_wine$quality)
 
 ## Random Forest with default parameters
 set.seed(42)
-rf_type <- randomForest(type ~ ., data = both_wine, importance = TRUE) 
+rf_type <- randomForest(type ~ ., data = train_wine, importance = TRUE) 
 rf_type
+
+pred_type <- predict(rf_type, valid_wine)
+confusionMatrix(pred_type, valid_wine$type)
 
 ## Evaluate variable importance
 # Show values
@@ -114,7 +126,7 @@ par(mfrow=c(1,1))
 ## 3. Find optimal mtry value
 set.seed(42)
 mtry <- tuneRF(both_wine[-which(names(both_wine)=="quality")],as.factor(both_wine$quality),
-               ntreeTry=500, stepFactor=1.5,improve=0.01, trace=TRUE, plot=TRUE)
+               ntreeTry=500, mtryStart = 5,stepFactor=1.5,improve=0.01, trace=TRUE, plot=TRUE)
 # Plot mtry values
 mtry
 mtext("d)", line = 0.5, adj = 0)
@@ -176,3 +188,17 @@ importance(rf_qual_reg)
 
 # Plot importance values
 varImpPlot(rf_qual_reg, main = NULL) # alcohol is the best predictor
+
+
+#### Party ####
+library(party)
+rf <- cforest(as.factor(quality) ~ .,
+              data = train_wine,
+              control = cforest_unbiased(mtry = 2, ntree = 500))
+
+(vars_imp <- varimp(rf, conditional = T))
+(vars_imp <- varimp(rf))
+
+pred_wine <- predict(rf, valid_wine, OOB=TRUE)
+
+confusionMatrix(pred_wine, as.factor(train_wine$quality))
