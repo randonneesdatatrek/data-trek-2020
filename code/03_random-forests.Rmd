@@ -1,0 +1,356 @@
+---
+title: "Random Forests tutorial"
+author: "Gabriel Dansereau"
+date: "March 5th 2020"
+output:
+  pdf_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: console
+---
+
+## Acknowledgments:
+Awesome resources who inspired this tutorial, check them out!:
+- https://uc-r.github.io/random_forests
+- https://koalaverse.github.io/machine-learning-in-R/random-forest.html
+- https://www.blopig.com/blog/2017/04/a-very-basic-introduction-to-random-forests-using-r/
+- https://towardsdatascience.com/understanding-auc-roc-curve-68b2303cc9c5
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data Preparation
+
+```{r Preparation}
+## Preparation
+# Load required packages
+library(randomForest)
+library(caret)
+
+# Load datasets
+red_dataset <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv", sep = ";")
+white_dataset <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-white.csv", sep = ";")
+
+# Creating working dataframe
+red_wine <- red_dataset
+white_wine <- white_dataset
+
+head(red_wine)
+head(white_wine)
+
+## Arrange dataset
+# Add type
+red_wine$type <- factor("red")
+head(red_wine)
+white_wine$type <- factor("white")
+head(white_wine)
+
+
+# Join datasets
+both_wine <- rbind(red_wine, white_wine)
+head(both_wine)
+tail(both_wine)
+
+# Extract index of wine type
+type_ind <- which(names(both_wine) == "type")
+
+```
+
+
+## Decision Tree Example
+
+Decision Trees:
+- Predict a categorical/numeric response variable
+- Split points: nodes where decision is made
+- Terminal/leaf node: node without descendant
+- Pros: handling huge datasets, mixed predictors, ignore redundant variables
+- Cons: unstable trees, poor predictive accuracy & unstable predictions, high variance
+
+Criterion & Best Split:
+- Gini Impurity: how often random element incorrectly labeled if labeled randomly, given label distribution
+  - sum(fi * (1 - fi))
+- Entropy: uncertainty in data set S, ~ data set (S), classes in S (X), ratio elem in x to elem in S p(x), 0 = perfect classification
+- Information gain: how much uncertainty reduced after splitting S on attribute A (diff in entropy)
+- Regression trees: minimize overall SSE (value vs constant for all trees)
+- Pruning, optimal subtree & cost complexity criterion: grow deep, prune back based on criterion (ex. number of terminal nodes)
+
+```{r}
+## Decision Tree Example
+library(rpart)
+
+set.seed(42)
+decision_tree <- rpart(type ~ ., data = both_wine)
+plot(decision_tree)
+text(decision_tree)
+
+set.seed(42)
+decision_tree <- rpart(as.factor(quality) ~ ., data = both_wine)
+plot(decision_tree)
+text(decision_tree)
+
+barplot(table(as.factor(both_wine$quality)))
+
+```
+
+# Modelling wine type - Random Forest
+
+Ensemble method:
+- Way to aggregate method from various models, should return better one
+
+Random forests:
+- Bagging (boostrap aggregating): sampling with replacement, predict unseen samples by average/majority)
+  - BUT still tree correlation, ~ same structure as all vars available at each split, doesn't optimally reduce variance of predictive values
+- Random Subspace/split-variable randomization: random subset of m features (variables) at each split (feature bagging)
+  - Corrects overfitting, decorrelates trees, reduces variance
+  - m: m = p/3 for regression trees, m = sqrt(p) for classification (?), m = p is bagging
+- OOB estimates: no need for cross-validation or separate test set for unbiased estimate of test set error, because estimated internally (tested in 1/3 of trees)
+  - Efficient, no data sacrificed
+  - BUT still differences between OOB error vs test error --> test set important if multiple models compared, complex loss functions --> cross-validation still possible
+- Variable importance: count correct OOB cases, permute var, recount correct --> big difference = important variable
+- Local importance score: ~ same as variable importance with percentage of votes instead of counts (?)
+- Overfitting: RF models more robust, possible with deep trees, but adding trees generally increases performance
+
+```{r}
+### Prep the data
+
+train_inds <- sample(1:nrow(both_wine), 0.7*nrow(both_wine))
+train_wine <- both_wine[train_inds,]
+table(train_wine$type, train_wine$quality)
+valid_wine <- both_wine[-train_inds,]
+table(train_wine$type, train_wine$quality)
+table(valid_wine$type, valid_wine$quality)
+```
+
+```{r}
+## Random Forest with default parameters
+set.seed(42)
+rf_type <- randomForest(type ~ ., data = train_wine, importance = TRUE) 
+rf_type
+rf_type_test <- randomForest(type ~ ., data = train_wine, importance = TRUE,
+                             xtest = valid_wine[,-type_ind], ytest = valid_wine$type)
+
+plot(rf_type)
+lines(1:500, rf_type_test$test$err.rate[,3], col="blue")
+
+pred_type <- predict(rf_type, valid_wine)
+confusionMatrix(pred_type, valid_wine$type)
+
+## Evaluate variable importance
+# Show values
+importance(rf_type)
+
+# Plot importance values
+varImpPlot(rf_type) # total.sulfur.dioxides & chlorides are clearly the best
+
+# Plot type as function of best parameters
+plot(type ~ chlorides, data = both_wine)
+plot(type ~ total.sulfur.dioxide, data = both_wine)
+
+```
+
+# Modeling wine quality - Random Forest (classification analysis)
+
+### Tune model 
+
+```{r}
+## 1. Model with default parameters
+set.seed(42)
+rf_qual <- randomForest(as.factor(quality) ~ ., data = both_wine)
+rf_qual
+# default ntree = 500
+# default mtry = 3
+# OOB error rate = 28.52%%
+
+## 2. Choose ntree value (where OOB error rate stabilizes at minimum)
+
+# Test model with ntree = 2000, 1000, and 600
+set.seed(42)
+rf_qual_2000 <- randomForest(as.factor(quality) ~ ., data = both_wine, ntree = 2000)
+set.seed(42)
+rf_qual_1000 <- randomForest(as.factor(quality) ~ ., data = both_wine, ntree = 1000)
+set.seed(42)
+rf_qual_600 <- randomForest(as.factor(quality) ~ ., data = both_wine, ntree = 600)
+
+# Plot error rate ~ ntree
+
+par(mfrow=c(2,2))
+plot(rf_qual_2000$err.rate[,"OOB"], type = "l", xlab = "ntree",
+     ylab = "OOB error rate")
+mtext("a)", line = 0.5, adj = 0)
+plot(rf_qual_1000$err.rate[,"OOB"], type = "l", xlab = "ntree",
+     ylab = "OOB error rate")
+mtext("b)", line = 0.5, adj = 0)
+plot(rf_qual_600$err.rate[,"OOB"], type = "l", xlab = "ntree",
+     ylab = "OOB error rate")
+mtext("c)", line = 0.5, adj = 0)
+par(mfrow=c(1,1))
+# stabilizes around n=500, same as default value. Let's select it
+
+## 3. Find optimal mtry value
+set.seed(42)
+mtry <- tuneRF(x = both_wine[-which(names(both_wine)=="quality")], y = as.factor(both_wine$quality),
+               ntreeTry=500, mtryStart = 5,stepFactor=1.5,improve=0.01, trace=TRUE, plot=TRUE)
+# Plot mtry values
+mtry
+mtext("d)", line = 0.5, adj = 0)
+# Best mtry = 3, same as default
+```
+
+## Modeling wine quality - Random Forest (regression analysis)
+
+```{r}
+## Modeling wine quality - Random Forest (regression analysis)
+
+## Random forest with default parameters
+set.seed(42)
+rf_qual_reg <- randomForest(quality ~ ., data = both_wine, importance=TRUE) 
+rf_qual_reg
+# default ntree = 500
+# default mtry = 4
+# Mean of squared residuals = 0.339
+# % Var explained = 55.55
+
+## Verify model accuracy with predicted values as integers
+# Extract OOB testing and predicted values from model
+testing_qual_reg <- rf_qual_reg$y
+predicted_qual_reg <- rf_qual_reg$predicted
+
+## Function to rearrange numeric predictions to integers as in
+## Cortez et al. 2009
+# Tolerance range is used to determine if predicted value is correct
+rf_reg_accuracy <- function(tolerance){ # Wrapped in a function
+  
+  # Loop for all predicted values
+  for(j in 1:length(predicted_qual_reg)){
+    
+    # Conditional operators to determine if predicted value is within tolerance
+    # range of real value
+    if(abs(predicted_qual_reg[j]-testing_qual_reg[j]) < tolerance) {
+      # if TRUE, predicted value is within tolerance range and considered
+      # correct; # hence, real value is selected
+      predicted_qual_reg[j] <- testing_qual_reg[j]
+    } else {
+      # if FALSE, predicted value is incorrect; hence, predicted value is simply
+      # rounded to closest integer
+      predicted_qual_reg[j] <- round(predicted_qual_reg[j], digits = 0)
+    }
+    
+  }
+  # Define datasets as factors with same levels (warnings if not)
+  testing_qual_reg <- as.factor(testing_qual_reg)
+  predicted_qual_reg <- factor(predicted_qual_reg,
+                               levels = levels(testing_qual_reg))
+  # Check confusion matrix of predicted values
+  print(confusionMatrix(predicted_qual_reg, testing_qual_reg))
+}
+
+# Verify model accuracy
+library(caret)
+rf_reg_accuracy(tolerance = 0.5) # accuracy = 0.700, similar to classification
+rf_reg_accuracy(tolerance = 1.0) # accuracy = 0.913
+
+## Evaluate variable importance
+# Show values
+importance(rf_qual_reg)
+
+# Plot importance values
+varImpPlot(rf_qual_reg, main = NULL) # alcohol is the best predictor
+```
+
+## Party
+
+```{r}
+# library(party)
+# rf <- cforest(as.factor(quality) ~ .,
+#               data = train_wine,
+#               control = cforest_unbiased(mtry = 2, ntree = 500))
+# 
+# (vars_imp <- varimp(rf, conditional = T))
+# (vars_imp <- varimp(rf))
+# 
+# pred_wine <- predict(rf, valid_wine, OOB=TRUE)
+# 
+# confusionMatrix(pred_wine, as.factor(train_wine$quality))
+```
+
+#### Ranger
+
+```{r}
+library(ranger)
+# time models
+system.time(rf_qual <- randomForest(as.factor(quality) ~ ., data = train_wine))
+system.time(ranger_qual <- ranger(as.factor(quality) ~ ., data = train_wine, importance = "impurity"))
+
+## Fine tuning
+# hyperparameter grid search
+hyper_grid <- expand.grid(
+  mtry       = seq(2, 6, by = 1),
+  node_size  = seq(1, 5, by = 1),
+  sampe_size = c(.55, .632, .70),
+  OOB   = 0
+)
+
+# total number of combinations
+nrow(hyper_grid)
+## [1] 160
+
+system.time(
+  for(i in 1:nrow(hyper_grid)) {
+  
+    # train model
+    model <- ranger(formula = as.factor(quality) ~ ., 
+                    data = train_wine, 
+                    num.trees = 500,
+                    mtry = hyper_grid$mtry[i],
+                    min.node.size = hyper_grid$node_size[i],
+                    sample.fraction = hyper_grid$sampe_size[i],
+                    importance = "impurity",
+                    seed = 42
+                    )
+  
+    # add OOB error to grid
+    hyper_grid$OOB[i] <- model$prediction.error
+  }
+)
+
+hyper_grid
+
+```
+
+## AUC
+
+```{r}
+# Validation set assessment #2: ROC curves and AUC
+# Needs to import ROCR package for ROC curve plotting:
+library(ROCR)
+# Calculate the probability of new observations belonging to each class
+# prediction_for_roc_curve will be a matrix with dimensions data_set_size x number_of_classes
+valid_wine$quality <- as.factor(valid_wine$quality)
+prediction_for_roc_curve <- predict(rf_qual, valid_wine, type="prob")
+# Use pretty colours:
+# pretty_colours <- c("#F8766D","#00BA38","#619CFF")
+# Specify the different classes
+(classes <- levels(as.factor(valid_wine$quality)))
+# For each class
+for (i in 1:length(class)){
+ # Define which observations belong to class[i]
+ true_values <- ifelse(as.factor(valid_wine$quality) == classes[i], 1, 0)
+ # Assess the performance of classifier for class[i]
+ pred <- prediction(prediction_for_roc_curve[,i], true_values)
+ perf <- performance(pred, "tpr", "fpr")
+ if (i == 1)
+ {
+     plot(perf, main="ROC Curve") 
+ }
+ else
+ {
+     plot(perf, main="ROC Curve",add=TRUE) 
+ }
+ # Calculate the AUC and print it to screen
+ auc.perf <- performance(pred, measure = "auc")
+ print(auc.perf@y.values)
+}
+```
+
