@@ -59,15 +59,15 @@ hcat(wheat.compactness, compactness)
 The `map` function is handy when we need to *apply complex operations to each element of an array*. Sometimes we can simply use a dot to broadcast a function. If you use a function multiple times, it might be interesting if you write it only once and broadcast with a dot, but if it's not the case or your data is a little bit mmore complex, it will be easier to use `map`.
 
 ### filter
-Ok, let's say we don't need all these data. Maybe we are only interested in kernels with a compactness value below the median+maximum/100. We can do that using the subset syntax, or we can use the `filter` function.
+Ok, let's say we don't need all these data. Maybe we are only interested in kernels for which the median+maximum/100 of the compactness value is higher than 0.9. We can do that using the subset syntax, or we can use the `filter` function.
 
 Using subset syntax:
-```julia
-wheat_loose = wheat[wheat.compactness .> median(wheat.compactness)+(maximum(wheat.compactness)/100),:]
-```
+
+*TOO COMPLEX*
+
 Now using filter
 ```julia
-wheat_loose = filter(x -> x.compactness .> median(wheat.compactness)+(maximum(wheat.compactness)/100), wheat)
+wheat_loose = filter(x -> median(x.compactness)+(maximum(x.compactness)/100) .> 0.9, wheat)
 ```
 
 > The function `filter` returns a copy of an array with only the elements for which a certain condition is true.
