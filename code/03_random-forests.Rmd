@@ -23,6 +23,14 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Random forest example
 
+Why are Random Forests a good choice:
+  - Easy to use & work with
+  - Easy to program
+  - Fast
+  - Good performance
+  - Not necessarily a lot of tuning
+  - Based on a simple concept
+
 What are Random Forests?
   - Models trained to predict categorical/numeric variable
   - Easy to run, good predictive performance without a lot of tuning, fast implementation
