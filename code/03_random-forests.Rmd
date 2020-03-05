@@ -59,7 +59,7 @@ white_dataset <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databa
 red_wine <- red_dataset
 white_wine <- white_dataset
 
-# Add wine type
+# Add wine tyqpe
 red_wine$type <- factor("red")
 white_wine$type <- factor("white")
 # Extract index of wine type
@@ -77,14 +77,15 @@ quality_ind <- which(names(both_wine) == "quality")
 ```
 
 ```{r}
-# Take a peak at the data
+## Data visualisation ####
+# Preview data
 head(both_wine)
 tail(both_wine)
 
-# Check data structure
+# Preview classes distribution
 table(both_wine$type, both_wine$quality)
-barplot(table(both_wine$quality))
 barplot(table(both_wine$type))
+barplot(table(both_wine$quality))
 ```
 
 ## Decision Tree Example
@@ -119,9 +120,9 @@ text(decision_tree)
 ```
 
 ```{r}
-# library(png)
-# img <- readPNG("./code/random-forests.png")
-# grid::grid.raster(img)
+library(png)
+img <- readPNG("./code/random-forests.png")
+grid::grid.raster(img)
 ```
 
 # Modelling wine type - Random Forest
@@ -144,34 +145,36 @@ Random forests:
 
 ```{r}
 ### Prep the data
+# Training set
+set.seed(42)
 train_inds <- sample(1:nrow(both_wine), 0.7*nrow(both_wine))
 train_wine <- both_wine[train_inds,]
 table(train_wine$type, train_wine$quality)
+
+# Validation
 valid_wine <- both_wine[-train_inds,]
-table(train_wine$type, train_wine$quality)
-table(valid_wine$type, valid_wine$quality)
+
 ```
 
 ```{r}
 ## Random Forest with default parameters
+# Simplest way
 set.seed(42)
 rf_type <- randomForest(type ~ ., data = train_wine, importance = TRUE) 
 rf_type
+
+# With validation dataset
+set.seed(42)
 rf_type_test <- randomForest(type ~ ., data = train_wine, importance = TRUE,
                              xtest = valid_wine[,-type_ind], ytest = valid_wine$type)
 rf_type_test
 
+# Plot model
 plot(rf_type)
 lines(1:500, rf_type_test$test$err.rate[,3], col="blue")
 
-pred_type <- predict(rf_type, valid_wine)
-confusionMatrix(pred_type, valid_wine$type)
-
-## Evaluate variable importance
-# Show values
+# Evaluate variable importance
 importance(rf_type)
-
-# Plot importance values
 varImpPlot(rf_type) # total.sulfur.dioxides & chlorides are clearly the best
 
 # Plot type as function of best parameters
@@ -189,44 +192,41 @@ plot(type ~ total.sulfur.dioxide, data = both_wine)
 set.seed(42)
 rf_qual <- randomForest(quality ~ ., data = both_wine)
 rf_qual
-# default ntree = 500
-# default mtry = 3
-# OOB error rate = 28.52%%
 
-## 2. Choose ntree value (where OOB error rate stabilizes at minimum)
+?randomForest
 
-# Test model with ntree = 2000, 1000, and 600
+# 1. Change ntree
+ntrees <- c(200, 500, 2000)
+tuned_ntrees <- list(rf200 = NULL, rf500 = NULL, rf2000 = NULL)
+for (i in 1:length(ntrees)) {
+  set.seed(42)
+  tuned_ntrees[[i]] <- randomForest(quality ~ ., data = train_wine, importance = TRUE, ntree = ntrees[i],
+                                    xtest = valid_wine[,-quality_ind], ytest = valid_wine$quality, mtry = 2)
+}
+
+plot(tuned_ntrees$rf2000$err.rate[,"OOB"], type = "l", 
+     xlab = "ntree", ylab = "OOB error rate", )
+plot(tuned_ntrees$rf500$err.rate[,"OOB"], type = "l", 
+     xlab = "ntree", ylab = "OOB error rate", )
+plot(tuned_ntrees$rf$err.rate[,"OOB"], type = "l", 
+     xlab = "ntree", ylab = "OOB error rate", )
+
+tuned_ntrees
+
+# 2. Change mtry
 set.seed(42)
-rf_qual_2000 <- randomForest(as.factor(quality) ~ ., data = both_wine, ntree = 2000)
-set.seed(42)
-rf_qual_1000 <- randomForest(as.factor(quality) ~ ., data = both_wine, ntree = 1000)
-set.seed(42)
-rf_qual_600 <- randomForest(as.factor(quality) ~ ., data = both_wine, ntree = 600)
+tuned_rf <- tuneRF(x = train_wine[,-quality_ind],
+       y = train_wine$quality,
+       mtryStart=3, stepFactor = 1.5, improve = 0.01,
+       trace = TRUE, plot = TRUE)
 
-# Plot error rate ~ ntree
+## Alternative using lapply 
+custom_rf <- function(data, label, ...) {
+  set.seed(42)
+  randomForest(label ~ ., data = data, importance = TRUE, ...)
+}
+lapply(ntrees, function(x) custom_rf(train_wine[,-quality_ind], train_wine$quality, ntree = x))
 
-par(mfrow=c(2,2))
-plot(rf_qual_2000$err.rate[,"OOB"], type = "l", xlab = "ntree",
-     ylab = "OOB error rate")
-mtext("a)", line = 0.5, adj = 0)
-plot(rf_qual_1000$err.rate[,"OOB"], type = "l", xlab = "ntree",
-     ylab = "OOB error rate")
-mtext("b)", line = 0.5, adj = 0)
-plot(rf_qual_600$err.rate[,"OOB"], type = "l", xlab = "ntree",
-     ylab = "OOB error rate")
-mtext("c)", line = 0.5, adj = 0)
-par(mfrow=c(1,1))
-# stabilizes around n=500, same as default value. Let's select it
-
-## 3. Find optimal mtry value
-set.seed(42)
-mtry <- tuneRF(x = both_wine[-which(names(both_wine)=="quality")], 
-               y = as.factor(both_wine$quality),
-               ntreeTry=500, mtryStart = 5,stepFactor=1.5,improve=0.01, trace=TRUE, plot=TRUE)
-# Plot mtry values
-mtry
-mtext("d)", line = 0.5, adj = 0)
-# Best mtry = 3, same as default
 ```
 
 
@@ -375,3 +375,5 @@ for (i in 1:length(class)){
 }
 ```
 
+To do:
+  - Review how splits are made --> Gini Impurity

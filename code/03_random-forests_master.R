@@ -35,10 +35,11 @@ quality_ind <- which(names(both_wine) == "quality")
 
 ## Data visualisation ####
 # Preview data
-
+head(both_wine)
 
 # Preview classes distribution
-
+table(both_wine$type)
+table(both_wine$quality)
 
 ## Decision Tree Example ####
 # Decision Tree for wine type
@@ -47,16 +48,16 @@ decision_tree <- rpart(type ~ ., data = both_wine)
 plot(decision_tree)
 text(decision_tree, xpd = NA)
 
-# Representation of a forest
-library(png)
-img <- readPNG("./code/random-forests.png")
-grid::grid.raster(img)
-
 # Decision Tree for wine quality
 set.seed(42)
 decision_tree <- rpart(as.factor(quality) ~ ., data = both_wine)
 plot(decision_tree)
 text(decision_tree)
+
+# Representation of a forest
+library(png)
+img <- readPNG("./code/random-forests.png")
+grid::grid.raster(img)
 
 ###########
 
@@ -64,10 +65,13 @@ text(decision_tree)
 # Training set
 set.seed(42)
 train_inds <- sample(1:nrow(both_wine), 0.7*nrow(both_wine))
-
+train_wine <- both_wine[train_inds,]
+table(train_wine$type, train_wine$quality)
 
 # Validation set
-
+valid_wine <- both_wine[-train_inds,]
+table(train_wine$type, train_wine$quality)
+table(valid_wine$type, valid_wine$quality)
 
 #######
 
@@ -75,38 +79,63 @@ train_inds <- sample(1:nrow(both_wine), 0.7*nrow(both_wine))
 
 ## Predict wine type with default parameters ####
 # Simplest way
+set.seed(42)
+rf_type <- randomForest(type ~ ., data = train_wine, importance = TRUE)
+rf_type
 
-
+# With validation dataset
+set.seed(42)
+rf_type_test <- randomForest(type ~ ., data = train_wine, importance = TRUE,
+                        xtest = valid_wine[,-type_ind], ytest = valid_wine$type)
+rf_type_test
 
 # Plot the model
-
-
+plot(rf_type)
 
 # Variable importance
-
-
+importance(rf_type)
+varImpPlot(rf_type)
 
 # Plot type as function of best parameters
-
-
+plot(type ~ chlorides, data = both_wine)
+plot(type ~ total.sulfur.dioxide, data = both_wine)
 
 ## Predict wine quality ####
 # Simplest way
+set.seed(42)
+rf_qual <- randomForest(quality ~ ., data = train_wine, importance = TRUE)
+rf_qual
 
+?randomForest
 
 ## Tune model
-# 1. Change mtry
+# 1. Change ntree
+ntrees <- c(200, 500, 2000)
+tuned_ntrees <- list(rf200 = NULL, rf500 = NULL, rf2000 = NULL)
+for (i in 1:length(ntrees)) {
+  set.seed(42)
+  tuned_ntrees[[i]] <- randomForest(quality ~ ., data = train_wine, importance = TRUE, ntree = ntrees[i],
+                                    xtest = valid_wine[,-quality_ind], ytest = valid_wine$quality, mtry = 2)
+}
 
+plot(tuned_ntrees$rf2000$err.rate[,"OOB"], type = "l", 
+     xlab = "ntree", ylab = "OOB error rate", )
+plot(tuned_ntrees$rf500$err.rate[,"OOB"], type = "l", 
+     xlab = "ntree", ylab = "OOB error rate", )
+plot(tuned_ntrees$rf$err.rate[,"OOB"], type = "l", 
+     xlab = "ntree", ylab = "OOB error rate", )
 
+tuned_ntrees
 
-# 2. Change ntree
+# 2. Change mtry
+set.seed(42)
+tuned_rf <- tuneRF(x = train_wine[,-quality_ind],
+       y = train_wine$quality,
+       mtryStart=3, stepFactor = 1.5, improve = 0.01,
+       trace = TRUE, plot = TRUE)
 
-
-
-
-
-# Check quality variable importance
-
+## Check quality variable importance
+varImpPlot(rf_qual)
 
 
 
