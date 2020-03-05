@@ -21,100 +21,123 @@ Awesome resources who inspired this tutorial, check them out!:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Random forest example
+
+What are Random Forests?
+  - Models trained to predict categorical/numeric variable
+  - Easy to run, good predictive performance without a lot of tuning, fast implementation
+  - An ensemble method: aggregating predictions made by single models (decision trees)
+  - 2 special features: bootstrap aggregating, variable randomization
+  - Can determine variable importance
+  
+
+```{r}
+library(png)
+img <- readPNG("./code/random-forests.png")
+grid::grid.raster(img)
+```
+
+
 ## Data Preparation
 
-```{r Preparation}
-## Preparation
+```{r}
 # Load required packages
-library(randomForest)
-library(caret)
-
-# Load datasets
-red_dataset <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv", sep = ";")
-white_dataset <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-white.csv", sep = ";")
-
-# Creating working dataframe
-red_wine <- red_dataset
-white_wine <- white_dataset
-
-head(red_wine)
-head(white_wine)
-
-## Arrange dataset
-# Add type
-red_wine$type <- factor("red")
-head(red_wine)
-white_wine$type <- factor("white")
-head(white_wine)
-
-
-# Join datasets
-both_wine <- rbind(red_wine, white_wine)
-head(both_wine)
-tail(both_wine)
-
-# Extract index of wine type
-type_ind <- which(names(both_wine) == "type")
+library(randomForest) # main package for random forests
+library(rpart) # package for single decision trees
+library(caret) # only needed for one function in this case
 
 ```
 
 
+```{r}
+## Prepare data
+# Load datasets
+red_dataset <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv", sep = ";")
+white_dataset <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-white.csv", sep = ";")
+
+# Create working dataframes
+red_wine <- red_dataset
+white_wine <- white_dataset
+
+# Add wine type
+red_wine$type <- factor("red")
+white_wine$type <- factor("white")
+# Extract index of wine type
+type_ind <- which(names(white_wine) == "type")
+
+# Join datasets
+both_wine <- rbind(red_wine, white_wine)
+
+# Backup dataframe with quality as numeric
+both_wine_numeric <-both_wine
+# Convert quality to factor
+both_wine$quality <- as.factor(both_wine$quality)
+# Extract index of wine quality
+quality_ind <- which(names(both_wine) == "quality")
+```
+
+```{r}
+# Take a peak at the data
+head(both_wine)
+tail(both_wine)
+
+# Check data structure
+table(both_wine$type, both_wine$quality)
+barplot(table(both_wine$quality))
+barplot(table(both_wine$type))
+```
+
 ## Decision Tree Example
 
 Decision Trees:
-- Predict a categorical/numeric response variable
-- Split points: nodes where decision is made
-- Terminal/leaf node: node without descendant
-- Pros: handling huge datasets, mixed predictors, ignore redundant variables
-- Cons: unstable trees, poor predictive accuracy & unstable predictions, high variance
+  - Predict a categorical/numeric response variable
+  - Split points: nodes where decision is made
+  - Terminal/leaf node: node without descendant
+  - Pros: handling huge datasets, mixed predictors, ignore redundant variables
+  - Cons: unstable trees, poor predictive accuracy & unstable predictions, high variance
 
 Criterion & Best Split:
-- Gini Impurity: how often random element incorrectly labeled if labeled randomly, given label distribution
-  - sum(fi * (1 - fi))
-- Entropy: uncertainty in data set S, ~ data set (S), classes in S (X), ratio elem in x to elem in S p(x), 0 = perfect classification
-- Information gain: how much uncertainty reduced after splitting S on attribute A (diff in entropy)
-- Regression trees: minimize overall SSE (value vs constant for all trees)
-- Pruning, optimal subtree & cost complexity criterion: grow deep, prune back based on criterion (ex. number of terminal nodes)
+  - Gini Impurity: how often random element incorrectly labeled if labeled randomly, given label distribution
+    - sum(fi * (1 - fi))
+  - Entropy: uncertainty in data set S, ~ data set (S), classes in S (X), ratio elem in x to elem in S p(x), 0 = perfect     classification
+  - Information gain: how much uncertainty reduced after splitting S on attribute A (diff in entropy)
+  - Regression trees: minimize overall SSE (value vs constant for all trees)
+  - Pruning, optimal subtree & cost complexity criterion: grow deep, prune back based on criterion (ex. number of terminal   nodes)
 
 ```{r}
 ## Decision Tree Example
-library(rpart)
-
 set.seed(42)
 decision_tree <- rpart(type ~ ., data = both_wine)
 plot(decision_tree)
-text(decision_tree)
+text(decision_tree, xpd = NA)
 
 set.seed(42)
 decision_tree <- rpart(as.factor(quality) ~ ., data = both_wine)
 plot(decision_tree)
 text(decision_tree)
 
-barplot(table(as.factor(both_wine$quality)))
-
 ```
 
 # Modelling wine type - Random Forest
 
 Ensemble method:
-- Way to aggregate method from various models, should return better one
+  - Way to aggregate method from various models, should return better one
 
 Random forests:
-- Bagging (boostrap aggregating): sampling with replacement, predict unseen samples by average/majority)
-  - BUT still tree correlation, ~ same structure as all vars available at each split, doesn't optimally reduce variance of predictive values
-- Random Subspace/split-variable randomization: random subset of m features (variables) at each split (feature bagging)
-  - Corrects overfitting, decorrelates trees, reduces variance
-  - m: m = p/3 for regression trees, m = sqrt(p) for classification (?), m = p is bagging
-- OOB estimates: no need for cross-validation or separate test set for unbiased estimate of test set error, because estimated internally (tested in 1/3 of trees)
-  - Efficient, no data sacrificed
-  - BUT still differences between OOB error vs test error --> test set important if multiple models compared, complex loss functions --> cross-validation still possible
-- Variable importance: count correct OOB cases, permute var, recount correct --> big difference = important variable
-- Local importance score: ~ same as variable importance with percentage of votes instead of counts (?)
-- Overfitting: RF models more robust, possible with deep trees, but adding trees generally increases performance
+  - Bagging (boostrap aggregating): sampling with replacement, predict unseen samples by average/majority)
+    - BUT still tree correlation, ~ same structure as all vars available at each split, doesn't optimally reduce variance of predictive values
+  - Random Subspace/split-variable randomization: random subset of m features (variables) at each split (feature bagging)
+    - Corrects overfitting, decorrelates trees, reduces variance
+    - m: m = p/3 for regression trees, m = sqrt(p) for classification (?), m = p is bagging
+  - OOB estimates: no need for cross-validation or separate test set for unbiased estimate of test set error, because estimated internally (tested in 1/3 of trees)
+    - Efficient, no data sacrificed
+    - BUT still differences between OOB error vs test error --> test set important if multiple models compared, complex loss functions --> cross-validation still possible
+  - Variable importance: count correct OOB cases, permute var, recount correct --> big difference = important variable
+  - Local importance score: ~ same as variable importance with percentage of votes instead of counts (?)
+  - Overfitting: RF models more robust, possible with deep trees, but adding trees generally increases performance
 
 ```{r}
 ### Prep the data
-
 train_inds <- sample(1:nrow(both_wine), 0.7*nrow(both_wine))
 train_wine <- both_wine[train_inds,]
 table(train_wine$type, train_wine$quality)
@@ -130,6 +153,7 @@ rf_type <- randomForest(type ~ ., data = train_wine, importance = TRUE)
 rf_type
 rf_type_test <- randomForest(type ~ ., data = train_wine, importance = TRUE,
                              xtest = valid_wine[,-type_ind], ytest = valid_wine$type)
+rf_type_test
 
 plot(rf_type)
 lines(1:500, rf_type_test$test$err.rate[,3], col="blue")
@@ -157,7 +181,7 @@ plot(type ~ total.sulfur.dioxide, data = both_wine)
 ```{r}
 ## 1. Model with default parameters
 set.seed(42)
-rf_qual <- randomForest(as.factor(quality) ~ ., data = both_wine)
+rf_qual <- randomForest(quality ~ ., data = both_wine)
 rf_qual
 # default ntree = 500
 # default mtry = 3
@@ -190,13 +214,19 @@ par(mfrow=c(1,1))
 
 ## 3. Find optimal mtry value
 set.seed(42)
-mtry <- tuneRF(x = both_wine[-which(names(both_wine)=="quality")], y = as.factor(both_wine$quality),
+mtry <- tuneRF(x = both_wine[-which(names(both_wine)=="quality")], 
+               y = as.factor(both_wine$quality),
                ntreeTry=500, mtryStart = 5,stepFactor=1.5,improve=0.01, trace=TRUE, plot=TRUE)
 # Plot mtry values
 mtry
 mtext("d)", line = 0.5, adj = 0)
 # Best mtry = 3, same as default
 ```
+
+```{r}
+
+```
+
 
 ## Modeling wine quality - Random Forest (regression analysis)
 
@@ -205,12 +235,17 @@ mtext("d)", line = 0.5, adj = 0)
 
 ## Random forest with default parameters
 set.seed(42)
-rf_qual_reg <- randomForest(quality ~ ., data = both_wine, importance=TRUE) 
+rf_qual_reg <- randomForest(quality ~ ., data = both_wine_numeric, importance=TRUE) 
 rf_qual_reg
 # default ntree = 500
 # default mtry = 4
 # Mean of squared residuals = 0.339
 # % Var explained = 55.55
+
+# mtry <- tuneRF(x = both_wine_numeric[,-quality_ind], 
+#                y = both_wine_numeric$quality,
+#                ntreeTry=500, mtryStart = 5,stepFactor=1.5,improve=0.01, trace=TRUE, plot=TRUE)
+
 
 ## Verify model accuracy with predicted values as integers
 # Extract OOB testing and predicted values from model
