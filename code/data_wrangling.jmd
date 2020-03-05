@@ -1,0 +1,110 @@
+# Filter, reduce and map
+Sometimes we don't need a loop to apply a function iteratively along an array! Filter, map and reduce are examples of functions that can help us do that in a more effective way.
+To test these functions, let's import a dataset about the differences in wheat seed among crops.
+
+```julia
+using CSV
+using DataFrames
+using Statistics
+
+wheat = dropmissing(CSV.read(download("https://archive.ics.uci.edu/ml/machine-learning-databases/00236/seeds_dataset.txt", tempname()); header=0, delim='\t'))
+```
+This dataset contains seven variables about 199 observations.
+The variables are measures of wheat kernels:
+- area (A)
+- perimeter (P)
+- compactness
+- length of kernel
+- width of kernel
+- asymmetry coefficient
+- length of kernel groove
+- cultivar (1, 2 or 3) : variety of wheat
+
+### Renaming columns
+But notice that the dataframe doesn't have descriptive column names, so we are going to name the columns to make it easier to remember what they are about:
+
+```julia
+rename!(wheat,
+  [:Column1 => :area, :Column2 => :perimeter,
+  :Column3 => :compactness, :Column4 => :kernel_length,
+  :Column5 => :kernel_width, :Column6 => :asymmetry,
+  :Column7 => :kernel_groove, :Column8 => :cultivar]
+  )
+```
+### map
+Now a trick: the variable compactness is actually a result of a function that takes two other columns as variables - area and perimeter. One way we could do that is, for example, by creating a for loop that will apply the formula of compactness to each line of the column _*area*_ and the column _*perimeter*_.
+
+```julia
+compactness = []
+for i in 1:nrow(wheat)
+  x = 4*pi*wheat.area[i]/wheat.perimeter[i]^2
+  push!(compactness, x)
+end
+compactness
+end
+```
+Buuut that's pretty time consuming. We will calculate it again using the `map` function
+
+```julia
+compactness = map((x,y) -> 4*pi*x/y^2, wheat.area, wheat.perimeter)
+```
+Inside `map` you can use *anonymous functions*, which can be very important when you need to do a very specific task.
+
+Let's  and compare our results with the original data!
+```julia
+hcat(wheat.compactness, compactness)
+```
+> The `map` function applies another function to each element of your array.
+
+The `map` function is handy when we need to *apply complex operations to each element of an array*. Sometimes we can simply use a dot to broadcast a function. If you use a function multiple times, it might be interesting if you write it only once and broadcast with a dot, but if it's not the case or your data is a little bit mmore complex, it will be easier to use `map`.
+
+### filter
+Ok, let's say we don't need all these data. Maybe we are only interested in kernels with a compactness value below the median+maximum/100. We can do that using the subset syntax, or we can use the `filter` function.
+
+Using subset syntax:
+```julia
+wheat_loose = wheat[wheat.compactness .> median(wheat.compactness)+(maximum(wheat.compactness)/100),:]
+```
+Now using filter
+```julia
+wheat_loose = filter(x -> x.compactness .> median(wheat.compactness)+(maximum(wheat.compactness)/100), wheat)
+```
+
+> The function `filter` returns a copy of an array with only the elements for which a certain condition is true.
+
+The `filter` function takes two arguments: another function and a dataframe. This is why we used an anonymous function in the first argument, but we could have used any other function.
+
+Another function that can help us subset our data is `select`. For those familiar with dplyr in R, it works in the same way:
+
+```julia
+select(wheat, [:compactness, :area, :kernel_length])
+```
+
+Now that we have our subset with only the loose wheat kernels, we can, for example, get the mean of each characteristic for each cultivar using `aggregate`.
+
+```julia
+aggregate(wheat_loose, :cultivar, mean)
+```
+
+We could chose to get only the mean of one variable, then maybe the `by` function would be more appropriate.
+```julia
+by(wheat_loose, :cultivar, :compactness => mean)
+```
+
+### Reduce
+`reduce` is a way to summarize a series of values along one or more dimensions in your matrix. For example, if we need the sum of the means of compactness by cultivar, we can combine the `by` function inside a `reduce` function.
+```julia
+reduce(+, by(wheat_loose, :cultivar, :compactness => mean).compactness_mean)
+```
+
+
+# Shortcuts
+`mapreduce` is a way to optimize when you need to _map_ a function in a array and get a summary afterwards. For example, if you need the sum of the log of each value of the column :area, you could do:
+
+```julia
+reduce(+, map(log, wheat.area))
+```
+Instead, you can use the `mapreduce` function:
+```julia
+mapreduce(log, +, wheat.area)
+```

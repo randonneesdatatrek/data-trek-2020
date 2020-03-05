@@ -1,0 +1,140 @@
+# Load packages and get dataset
+```julia
+using CSV
+using DataFrames
+using Statistics
+
+wheat = dropmissing(CSV.read(download("https://archive.ics.uci.edu/ml/machine-learning-databases/00236/seeds_dataset.txt", tempname()); header=0, delim='\t'))
+```
+#=
+The variables are measures of wheat kernels:
+- area (A)
+- perimeter (P)
+- compactness
+- length of kernel
+- width of kernel
+- asymmetry coefficient
+- length of kernel groove
+- cultivar (1, 2 or 3) : variety of wheat
+=#
+
+# Rename columns
+```julia
+rename!(wheat,
+  [:Column1 => :area,
+  :Column2 => :perimeter,
+  :Column3 => :compactness,
+  :Column4 => :kernel_length,
+  :Column5 => :kernel_width,
+  :Column6 => :asymmetry,
+  :Column7 => :kernel_groove, :Column8 => :cultivar]
+  )
+```
+#=
+compactness = 4*pi*area/perimeter^2
+=#
+
+# Calculate the compactness values
+## using a for loop
+```julia
+compactness = []
+for i in 1:nrow(wheat)
+  x = 4*pi*wheat.area[i]/wheat.perimeter[i]^2
+  push!(compactness, x)
+end
+compactness
+```
+## using `map`
+map(f, array)
+```julia
+
+
+
+```
+## comparing arrays
+```julia
+hcat(wheat.compactness, compactness)
+```
+
+# Subset the data to the rows in which the values of the column compactness is higher than its median + maximum /100
+## Using subset synthax
+
+*YOU CAN'T!*
+
+## Using `filter`
+filter(f, df)
+
+```julia
+
+
+
+```
+
+# Select only columns compactness, area, and kernel_length
+select(df, [:col1, :col2])
+
+```julia
+
+
+
+
+```
+
+# Aggregate categories
+
+## check categories of cultivars
+```julia
+levels(wheat.cultivar)
+```
+## using `aggregate` to get means by cultiver type
+aggregate(df, col, f)
+
+```julia
+
+
+
+```
+## using `by` to get the mean of compactness by cultivar
+by(df, col_cat, col_val => f)
+
+```julia
+
+
+```
+
+# Reduce to the sum of the column area
+reduce(op, df.col)
+```julia
+reduce(+, wheat.area)
+```
+
+# Mixing `reduce` and `by` to get the sum of means of the compactness value by cultivar
+reduce(op, by(df, col, val => f).val_f)
+
+```julia
+
+
+```
+
+# Mixing `reduce` and `map` to get the sum of the log of each value of the column :area
+## map inside reduce
+```julia
+
+```
+
+# mapreduce
+```julia
+
+
+```
+
+
+# Checkpoint
+- rename columns
+- apply function over an array
+- filter rows
+- select columns
+- aggregate rows
+- apply function to lines by category
+- reduce lines or columns to one value
+- apply a function and summarize at the same time
