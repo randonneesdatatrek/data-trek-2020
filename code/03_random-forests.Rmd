@@ -37,14 +37,6 @@ What are Random Forests?
   - An ensemble method: aggregating predictions made by single models (decision trees)
   - 2 special features: bootstrap aggregating, variable randomization
   - Can determine variable importance
-  
-
-```{r}
-library(png)
-img <- readPNG("./code/random-forests.png")
-grid::grid.raster(img)
-```
-
 
 ## Data Preparation
 
@@ -124,6 +116,12 @@ decision_tree <- rpart(as.factor(quality) ~ ., data = both_wine)
 plot(decision_tree)
 text(decision_tree)
 
+```
+
+```{r}
+# library(png)
+# img <- readPNG("./code/random-forests.png")
+# grid::grid.raster(img)
 ```
 
 # Modelling wine type - Random Forest
@@ -231,10 +229,6 @@ mtext("d)", line = 0.5, adj = 0)
 # Best mtry = 3, same as default
 ```
 
-```{r}
-
-```
-
 
 ## Modeling wine quality - Random Forest (regression analysis)
 
@@ -302,22 +296,6 @@ importance(rf_qual_reg)
 varImpPlot(rf_qual_reg, main = NULL) # alcohol is the best predictor
 ```
 
-## Party
-
-```{r}
-# library(party)
-# rf <- cforest(as.factor(quality) ~ .,
-#               data = train_wine,
-#               control = cforest_unbiased(mtry = 2, ntree = 500))
-# 
-# (vars_imp <- varimp(rf, conditional = T))
-# (vars_imp <- varimp(rf))
-# 
-# pred_wine <- predict(rf, valid_wine, OOB=TRUE)
-# 
-# confusionMatrix(pred_wine, as.factor(train_wine$quality))
-```
-
 #### Ranger
 
 ```{r}
@@ -364,7 +342,7 @@ hyper_grid
 
 ## AUC
 
-```{r}
+```{r, include = FALSE}
 # Validation set assessment #2: ROC curves and AUC
 # Needs to import ROCR package for ROC curve plotting:
 library(ROCR)
