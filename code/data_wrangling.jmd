@@ -61,13 +61,9 @@ The `map` function is handy when we need to *apply complex operations to each el
 ### filter
 Ok, let's say we don't need all these data. Maybe we are only interested in kernels for which the median+maximum/100 of the compactness value is higher than 0.9. We can do that using the subset syntax, or we can use the `filter` function.
 
-Using subset syntax:
-
-*TOO COMPLEX*
-
-Now using filter
+Using filter
 ```julia
-wheat_loose = filter(x -> median(x.compactness)+(maximum(x.compactness)/100) .> 0.9, wheat)
+wheat_loose = filter(x -> median.(x.compactness)+(maximum.(x.compactness)/100) .> 0.9, wheat)
 ```
 
 > The function `filter` returns a copy of an array with only the elements for which a certain condition is true.

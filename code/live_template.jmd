@@ -57,10 +57,6 @@ hcat(wheat.compactness, compactness)
 ```
 
 # Subset the data to the rows in which the values of the column compactness is higher than its median + maximum /100
-## Using subset synthax
-
-*YOU CAN'T!*
-
 ## Using `filter`
 filter(f, df)
 
