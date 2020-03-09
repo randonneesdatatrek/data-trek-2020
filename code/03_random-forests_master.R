@@ -1,5 +1,17 @@
 ######## Random Forests - Live coding tutorial ########
 
+## Tutorial content
+# 1. Preparation
+# 2. Data visualization
+# 3. Decision Tree example
+# 4. Prepare training & validation datasets
+## Random Forests
+# 5. Predict wine type
+# 6. Predict wine quality
+## Supplementary Material
+# S1. Predict wine quality (regression analysis)
+# S2. Using package "ranger"
+
 #### 1. Preparation ####
 
 # Load required packages
@@ -32,7 +44,7 @@ both_wine$quality <- as.factor(both_wine$quality)
 quality_ind <- which(names(both_wine) == "quality")
 
 
-#### 2. Data visualisation ####
+#### 2. Data visualization ####
 # Preview data
 head(both_wine)
 
