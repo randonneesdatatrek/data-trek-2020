@@ -134,9 +134,60 @@ tuned_rf <- tuneRF(x = train_wine[,-quality_ind],
 varImpPlot(rf_qual)
 
 
+######## Supplementary material ########
+
+# S1. Regression analysis using randomForest
+# S2. Random forests using package "ranger" (faster than randomFore)
+
+#### S1. Modeling wine quality - Random Forest (regression analysis) ####
+
+## Random forest with default parameters
+set.seed(42)
+rf_qual_reg <- randomForest(quality ~ ., data = both_wine_numeric, importance=TRUE) 
+rf_qual_reg
+
+# Tune model
+# mtry <- tuneRF(x = both_wine_numeric[,-quality_ind], 
+#                y = both_wine_numeric$quality,
+#                ntreeTry=500, mtryStart = 5,stepFactor=1.5,improve=0.01, trace=TRUE, plot=TRUE)
 
 
+## Verify model accuracy with predicted values as integers
+# Extract OOB testing and predicted values from model
+testing_qual_reg <- rf_qual_reg$y
+predicted_qual_reg <- rf_qual_reg$predicted
 
+## Function to rearrange numeric predictions to integers as in
+## Cortez et al. 2009 (https://doi.org/10.1016/j.dss.2009.05.016) 
+## (article in which the data was published)
+## (they used a tolerance range on the predicted values from regression models)
+
+# Tolerance range is used to determine if predicted value is correct
+rf_reg_accuracy <- function(testing_set, predicted_set, tolerance){ # Wrapped in a function
+  
+  # Loop for all predicted values
+  for(j in 1:length(predicted_set)){
+    
+    # Conditional operators to determine if predicted value is within tolerance
+    # range of real value
+    if(abs(predicted_set[j]-testing_set[j]) < tolerance) {
+      # if TRUE, predicted value is within tolerance range and considered
+      # correct; # hence, real value is selected
+      predicted_set[j] <- testing_set[j]
+    } else {
+      # if FALSE, predicted value is incorrect; hence, predicted value is simply
+      # rounded to closest integer
+      predicted_set[j] <- round(predicted_set[j], digits = 0)
+    }
+    
+  }
+  # Define datasets as factors with same levels (warnings if not)
+  testing_set <- as.factor(testing_set)
+  predicted_set <- factor(predicted_set,
+                               levels = levels(testing_set))
+  # Check confusion matrix of predicted values
+  print(confusionMatrix(predicted_set, testing_set))
+}
 
 
 ########
