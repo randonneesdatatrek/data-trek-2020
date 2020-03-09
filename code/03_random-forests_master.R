@@ -189,10 +189,65 @@ rf_reg_accuracy <- function(testing_set, predicted_set, tolerance){ # Wrapped in
   print(confusionMatrix(predicted_set, testing_set))
 }
 
+# Verify model accuracy
+rf_reg_accuracy(testing_qual_reg, predicted_qual_reg, tolerance = 0.5) # accuracy = 0.700, similar to classification
+rf_reg_accuracy(testing_qual_reg, predicted_qual_reg, tolerance = 1.0) # accuracy = 0.913
 
-########
+## Evaluate variable importance
+# Show values
+importance(rf_qual_reg)
 
-## Acknowledgments:
+# Plot importance values
+varImpPlot(rf_qual_reg) # alcohol is the best predictor
+
+#### S2. Random Forests using package "ranger" ####
+
+# ranger is an alternative package to perform random forests models, much faster than the default one
+# It functions in a similiar way, and is especially useful to test multiple parameter combinations given its speed
+
+library(ranger)
+# time models
+system.time(rf_qual <- randomForest(as.factor(quality) ~ ., data = train_wine))
+system.time(ranger_qual <- ranger(as.factor(quality) ~ ., data = train_wine, importance = "impurity"))
+
+## Fine tuning
+# Hyperparameter grid search (test multiple parameter combinations)
+hyper_grid <- expand.grid(
+  mtry       = seq(2, 6, by = 1),
+  node_size  = seq(1, 5, by = 1),
+  sampe_size = c(.55, .632, .70),
+  OOB   = 0
+)
+
+# Total number of combinations
+nrow(hyper_grid)
+
+# Run all models
+system.time(
+  for(i in 1:nrow(hyper_grid)) {
+    
+    # train model
+    model <- ranger(formula = as.factor(quality) ~ ., 
+                    data = train_wine, 
+                    num.trees = 500,
+                    mtry = hyper_grid$mtry[i],
+                    min.node.size = hyper_grid$node_size[i],
+                    sample.fraction = hyper_grid$sampe_size[i],
+                    importance = "impurity",
+                    seed = 42
+    )
+    
+    # add OOB error to grid
+    hyper_grid$OOB[i] <- model$prediction.error
+  }
+)
+
+# Check results
+hyper_grid
+
+
+
+#### Acknowledgments: ####
 # Awesome resources who inspired this tutorial, check them out!:
 #   - https://uc-r.github.io/random_forests
 #   - https://koalaverse.github.io/machine-learning-in-R/random-forest.html
