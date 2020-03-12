@@ -15,12 +15,14 @@
 - git status
 - git add
 - git commit
-- git push
-- git pull
-- git diff
 - git log
+- git push
+- (github commit)
+- git fetch
+- git diff
+- git pull
 
-- git show-branch -a
+- git branch -a
 - git branch name
 - git checkout
 
