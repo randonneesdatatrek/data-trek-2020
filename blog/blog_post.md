@@ -1,12 +1,5 @@
 # A Journey with Data Trekkers
 
-- The #100DaysOfCode context
-- The idea for the internship
- - How can an ecologist benefit from - or contribute to - the challenge?
-- The preparation
-- The event
-- The follow up
-
 Back in 2019, which feels like decades ago, we started a humble project in the Poisot lab which we called Code Hour.
 The goal was to set weekly hours to practice Julia, since we were all learning to use it and we could greatly benefit from each other's help and encouragement.
 The project went well (although we frequently ended up spending much more than one hour). It "spilled" out of our lab and found enthusiasm at [IVADO][ivado], who already had plans to promote a challenge in which participants would make a commitment to code for 100 days.
