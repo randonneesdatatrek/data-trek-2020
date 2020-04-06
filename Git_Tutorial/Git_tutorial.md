@@ -1,6 +1,6 @@
 # Data.Trek 2020: Git Tutorial
 
-__Author: Savandara Besse__
+__Author: @ladyson1806 (Savandara Besse)__
 
 _____
 
