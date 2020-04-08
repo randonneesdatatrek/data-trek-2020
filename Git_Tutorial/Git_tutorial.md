@@ -1,6 +1,6 @@
 # Data.Trek 2020: Git Tutorial
 
-__Author: @ladyson1806 (Savandara Besse)__
+__Author: Savandara Besse__
 
 _____
 
@@ -86,8 +86,8 @@ Next, you would want to clone your repository on your computer. To do so, in you
 
 > -	`git status` will provide you with an overview of what you need to commit.
 
-> - If you are working with someone else, it is important to have the last version of your Git repository before pushing.
-> -	 `git pull` will help you get the last version of your remote Git repository from Github (not show in my example).
+> - If you are working with someone else, it is important to have the most updated version of your Git repository before pushing.
+> -	 `git pull` will help you get the latest version of your remote Git repository from Github (not shown in my example).
 > - If there is something new in your Git repository (either because you added something through the web interface or because someone else changed something), the content of the remote repository will be downloaded into your local repository.
 > - If nothing has been changed, it will tell you that your repository is up to date.
 
