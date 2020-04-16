@@ -103,7 +103,7 @@ dotplot!(cultivar_int, seeds.kernel_length,
 
 
 ### Plots together
-l = @layout [a; b c]
+l = @layout [a{0.6h}; b c]
 plot(plotA, plotB, plotC, layout=l,
     legend = false,
     title = ["($i)" for j in 1:1, i in 1:3], titleloc = :right, titlefont = font(8))
