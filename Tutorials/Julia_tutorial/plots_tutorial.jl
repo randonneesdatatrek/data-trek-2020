@@ -39,12 +39,20 @@ rename!(seeds,
 # Basic plot
 scatter(seeds.kernel_length, seeds.kernel_groove)
 
+# Color palette
+pal = (
+    C1=RGB(230/255,159/255,0/255),
+    C2=RGB(86/255,190/255,233/255),
+    C3=RGB(0/255,158/255,115/255),
+    lr=RGB(204/255,121/255,167/255)
+)
+
 # Make it pretty
 plotA = scatter(seeds.kernel_length, seeds.kernel_groove,
                 color=:grey, alpha=0.8,
                 label="",
                 frame=:box, dpi=120,
-                smooth=true, linecolor=RGB(204/255,121/255,167/255), linewidth=3)
+                smooth=true, linecolor=pal.lr, linewidth=3)
 xaxis!(xlabel="Kernel length (cm)", xlims=(4.8,6.8))
 yaxis!(ylabel="Groove length (cm)", ylims=(4.4,6.7))
 
@@ -60,28 +68,28 @@ plot!(x, x,
 
 ### Density plots
 using StatsPlots
+
+# Density of Kernel length
 plotB = density(seeds.kernel_length, groups=seeds.cultivar,
                 linewidth=2,
-                xlabel="Kernel length (cm)", ylabel="Density",
-                xlims=(4.8,6.8),
+                xlabel="Kernel or groove length (cm)", ylabel="Density",
+                xlims=(4, 7.5),
                 label=["C1" "C2" "C3"],
+                linecolor=[pal.C1 pal.C2 pal.C3],
                 legend=:topright, foreground_color_legend=nothing,
                 frame=:box, dpi=120)
 
-plotC = density(seeds.kernel_groove, groups=seeds.cultivar,
-                linewidth=2,
-                xlabel="Groove length (cm)", ylabel="Density",
-                xlims=(4.4,6.7),
-                label=["C1" "C2" "C3"],
-                legend=:topright, foreground_color_legend=nothing,
-                frame=:box, dpi=120)
+# Density of Groove length
+density!(seeds.kernel_groove, groups=seeds.cultivar,
+         linewidth=2, linestyle=:dot,
+         linecolor=[pal.C1 pal.C2 pal.C3], lab="")
 
 
 ### Plots together
-l = @layout [a; b c]
-plot(plotA, plotB, plotC, layout=l,
+l = @layout [a; b]
+plot(plotA, plotB, layout=l,
     legend = false,
-    title = ["($i)" for j in 1:1, i in 1:3], titleloc = :right, titlefont = font(8))
+    title = ["($i)" for j in 1:1, i in 1:2], titleloc = :right, titlefont = font(8))
 savefig(joinpath("tutorials/Julia_tutorial", "fig"))
 
 
