@@ -85,11 +85,28 @@ density!(seeds.kernel_groove, groups=seeds.cultivar,
          linecolor=[pal.C1 pal.C2 pal.C3], lab="")
 
 
+### Violin plots
+cultivar_int = string.(convert.(Int64, seeds.cultivar))
+
+plotC = violin(cultivar_int, seeds.kernel_length,
+       color=pal.lr,
+       label="",
+       xlabel="Cultivar",
+       ylabel="Kernel length (cm)",
+       frame=:box, dpi=120)
+boxplot!(cultivar_int, seeds.kernel_length,
+        color=:grey, alpha=0.5,
+        label="")
+dotplot!(cultivar_int, seeds.kernel_length,
+        color=:grey, alpha=0.5, markersize=1,
+        label="")
+
+
 ### Plots together
-l = @layout [a; b]
-plot(plotA, plotB, layout=l,
+l = @layout [a; b c]
+plot(plotA, plotB, plotC, layout=l,
     legend = false,
-    title = ["($i)" for j in 1:1, i in 1:2], titleloc = :right, titlefont = font(8))
+    title = ["($i)" for j in 1:1, i in 1:3], titleloc = :right, titlefont = font(8))
 savefig(joinpath("tutorials/Julia_tutorial", "fig.png"))
 
 
