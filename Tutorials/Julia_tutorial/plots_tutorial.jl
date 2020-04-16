@@ -89,7 +89,7 @@ density!(seeds.kernel_groove, groups=seeds.cultivar,
 cultivar_int = string.(convert.(Int64, seeds.cultivar))
 
 plotC = violin(cultivar_int, seeds.kernel_length,
-       color=pal.lr,
+       color=[pal.C1, pal.C2, pal.C3],
        label="",
        xlabel="Cultivar",
        ylabel="Kernel length (cm)",
@@ -107,7 +107,7 @@ l = @layout [a{0.6h}; b c]
 plot(plotA, plotB, plotC, layout=l,
     legend = false,
     title = ["($i)" for j in 1:1, i in 1:3], titleloc = :right, titlefont = font(8))
-savefig(joinpath("tutorials/Julia_tutorial", "fig.png"))
+savefig(joinpath("tutorials", "Julia_tutorial", "fig.png"))
 
 
 
